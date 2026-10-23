@@ -1,0 +1,326 @@
+# 更新日志
+
+## v0.5.8 (2026-10-22)
+
+### 新功能
+- ✨ 设置中心「没有时降级」下新增「降级顺序」：列出首选音质与之后依次尝试的音质，可上移、下移、移除或添加，「默认」恢复内置顺序；按首选音质分别保存，下载对话框中临时选的首选音质也用它自己的顺序；清空即不降级
+- ✨ 下载中心完整显示 ALAC 检测结果（不再截断，窄屏时与音质一起换行到标题下方），专辑 / 歌单任务卡片显示检测汇总
+
+### 修复
+- 🐛 没有 master 的歌曲只有 `/webplayback` 的 Widevine AAC-LC 256（如 cn `1569279827`），之前无论设置如何都会按 AAC 256 下载：现在与其他音质走同一顺序，只在首选或降级顺序中有 AAC 256 时下载，否则跳过
+
+### 变更
+- ⚡ amp-api 标为 `hasLyrics: false` 的歌曲不再向 wrapper-lite 请求歌词；歌词获取失败（404 除外）最多尝试 3 次，间隔 1 秒、2 秒，取消下载时立即停止
+
+## v0.5.7 (2026-10-21)
+
+### 新功能
+- ✨ 「检测 ALAC」可同时检测 wrapper-lite 给出的 master m3u8：它与网页版（amp-api `enhancedHls`）可能是不同的打包，有时音质更高（如 `1679278167`：网页版 24/48，wrapper-lite 另有 24/96）。两边最高音质 ALAC 相同时只检测一次，不同时分别列出并标明哪边更高
+- ✨ 歌单页、歌曲页头部与歌曲「更多」菜单（专辑、歌单、搜索等处）也可以检测 ALAC
+- ✨ 歌曲页同时取网页版的 master 与 wrapper-lite 的比较，只在 wrapper-lite 中有的音质标为「仅 wrapper-lite」，可复制网页版 master 地址
+- ✨ 设置中心：可关闭下载时的 ALAC END 标记修复；可在下载 ALAC 时检测并把结果写入自定义标签（默认 `ALAC_CHECK`），结论同时显示在下载中心；检测直接使用下载到的数据，不另发请求
+
+### 变更
+- 💄 检测对话框打开后不再自动开始：可全选、全不选或勾选部分曲目；显示地区、专辑 / 歌单 / 歌曲 ID、歌曲 ID 与检测时间；选项改为一行短标签，说明收进「说明」，每个来源的结果显示为一张卡片
+
+## v0.5.6 (2026-10-20)
+
+### 新功能
+- ✨ 专辑页「检测 ALAC」（播放、随机播放旁的波形按钮）：逐首检测最高音质 ALAC 中末尾被覆盖的原样帧（[AppleMusicDecrypt#136](https://github.com/WorldObservationLog/AppleMusicDecrypt/issues/136)），不经过 wrapper-lite，也不请求 `/key`
+  - master m3u8 取自 amp-api 的 `extendedAssetUrls.enhancedHls`；每个分段只下载开头的 moof，长度超过一帧 PCM 的 sample 再只读末尾 4 字节（cbcs 不加密的尾部），16-bit / 44.1 kHz 的一首歌约 80 KB
+  - 区分「缺 END 标记」（FFmpeg 等会丢弃该帧）与「隐藏缺陷」（END 标记恰好是 `111` 但填充位不为零：解码不报错，最后一个样本已损坏），列出帧号、时间与末尾 4 字节，可复制文字报告
+  - 显示打包日期（init 段 `mvhd` 的创建时间）与打包软件版本（`swre`）
+  - 可选：用固定密钥解密第一个分段（约 15 秒）并解码，分析实际位深（低位是否全为零）与频宽（高于量化噪声的最高频率，陡降时提示疑似升频或有损来源），并画出频谱
+
+### 变更
+- 📝 README 更正 ALAC 包尾修复的说明：恢复 END 标记只是让解码器不再丢弃该帧，被覆盖的最后一个样本无法还原
+
+## v0.5.5 (2026-10-19)
+
+### 变更
+- 💄 播放栏仿照 music.apple.com 重做为悬浮的玻璃胶囊（高 56px，最宽 720px）：左侧播放控制、中间 LCD、右侧操作
+  - LCD 带 34px 封面、两行滚动标题与 2px 进度线，悬停或拖动时展开为 7px 并显示时间
+  - 音量改为喇叭按钮加滑出的滑块，点击静音
+  - 播放提示（FLAC 转码、多声道 PCM）移入模式徽标后的弹出框，只在第一次自动显示；播放错误浮在播放栏上方
+  - 760px 及以下改用紧凑的迷你播放器布局
+- 💄 歌曲页仿照 music.apple.com 重做
+  - 页头：208px 封面（1260px 以上 300px）带光晕，手机上居中；标题、可点击的艺人、专辑 · 年份 · 流派与音频特性徽标；页面按封面颜色着色，与专辑页一致
+  - 播放按钮在歌曲播放时变为暂停；收藏按钮与「更多」菜单（资料库、播放列表、下载、复制链接、在 Apple Music 中打开）取代原来的一排按钮
+  - 音质列表按格式分组为圆角卡片，行样式与专辑曲目行一致；每行有下载按钮，进度环点击即取消；「更多」菜单新增「复制 m3u8 链接」；加载时显示骨架行
+  - 新增制作人员、信息、音乐视频与「更多作品」栏目
+
+## v0.5.4 (2026-10-19)
+
+### 新功能
+- ✨ 首选音质新增 AAC 128 kbps、AAC 双耳 128 kbps、HE-AAC 双耳 64 kbps、AAC 缩混 128 kbps、HE-AAC 缩混 64 kbps（Apple 的 master 本来就有这些版本，之前同类中总是取最高码率），共 11 项；设置中心与下载对话框的下拉框按「无损与全景声 / AAC 立体声 / AAC 双耳 / AAC 缩混」分组，说明中给出每分钟的大致文件大小。新选项各有降级顺序，例如普通歌曲没有双耳 128 时依次改用 HE 双耳、立体声 128（#4）
+- 📝 README 加入 Telegram 交流群 [@apple_music_alac](https://t.me/apple_music_alac)
+
+### 修复
+- 🐛 部分较早的 MV（如 1175186184）的 media playlist 没有 `EXT-X-KEY`，之前报错 “No PlayReady media found”，现在可以播放与下载
+
+## v0.5.3 (2026-10-19)
+
+### 新功能
+- ✨ `--client-concurrency`：每个客户端 IP 同时转发 wrapper-lite 的请求上限（不含 `/status`），超出的排队等待而不是失败；与按分钟计的 `--client-rate` 配合，单个访客突发时不会占满 `--wrapper-concurrency` 的名额、堵住其他用户。排队的请求在日志中标出 `QUEUED … by client concurrency`
+
+### 修复
+- 🐛 `/status` 不计入 `--client-rate`，客户端却可以一直刷它、每次都请求 wrapper-lite，占用 `--wrapper-rate` 与并发名额：现在所有客户端共用同一结果 10 秒，同时到达的请求合并为一次，wrapper-lite 每 10 秒最多收到一次 `/status`；上游 `/status` 另设 10 秒超时
+
+## v0.5.2 (2026-10-19)
+
+### 新功能
+- ✨ `--client-rate`：每个客户端 IP 任意 60 秒内转发 wrapper-lite 的请求上限（不含 `/status`），超出时返回 HTTP 429 与 `Retry-After`、不再发往 wrapper-lite，免得单个访客（如批量扒取整个艺人）用光共用的 wrapper-lite；被拒绝的请求在日志中标出 `client <ip> over N/min`
+- ✨ `--client-ip-header`：从反向代理设置的请求头（如 `X-Real-IP`、`CF-Connecting-IP`）取客户端 IP，默认用 TCP 对端地址
+
+### 修复
+- 🐛 wrapper-lite 限并发：超时、读响应出错或被取消（客户端断开）的请求立即归还并发名额，而 wrapper-lite 上可能仍在处理，上游变慢时实际并发会超过 `--wrapper-concurrency`（公共 wrapper-lite 因此返回 `rate limited (concurrency)` 乃至 `banned`）：现在这类请求的名额再保留 30 秒才归还，正常结束或连接失败时仍立即归还；`wrapper-lite THROTTLED` 一行显示保留的数量
+
+## v0.5.1 (2026-10-19)
+
+### 新功能
+- ✨ `--local-wrapper-only`：二进制不再转发 wrapper-lite，页面只用浏览器直连（与 serverless 部署没有设置 `AM_HOOK_WRAPPER_URL` 时相同）；`--wrapper-url` / `--wrapper-rate` / `--wrapper-concurrency` 改为页面本地模式的默认值
+- ✨ `--wrapper-hint`（serverless 为 `AM_HOOK_WRAPPER_HINT`）：在本地 wrapper-lite 设置上方显示部署方的提示，其中的网址显示为链接
+- ✨ 命令行显示 wrapper-lite 排队情况：排队期间每秒一行 `wrapper-lite THROTTLED`（最近 1 秒发出数 / 上限、进行中、排队数），队列清空时输出汇总；排队的请求在请求日志中标出 `QUEUED … by rate limit / concurrency limit`
+
+### 修复
+- 🐛 wrapper-lite 限速：排队等待中的请求被取消（浏览器中止、断开）时会多放行一个请求，这一秒内可能超过 `--wrapper-rate`
+
+## v0.5.0 (2026-10-18)
+
+### 新功能
+- ✨ 广播（`/radio`，侧边栏与手机菜单中「排行榜」与「设置」之间）：与 music.apple.com/{cc}/radio 相同的编辑区块，直播电台货架显示「直播」标记与正在播出的节目；填过 media-user-token 时最上面另有「你的电台」（个人电台与最近播放）
+- ✨ 电台页（`/https://music.apple.com/<cc>/station/<slug>/ra.<id>`），新发现、编辑页与广播中的电台链接都在站内打开：
+  - 个人电台与编辑电台：与歌单页相同的曲目列表，内容是电台接下来的几首，可换一批、加载更多，播放到队尾前自动续取（`AmPlayer.playQueue` 新增 `more`）
+  - 广播单集（音频或视频）：沿用 MV 页的布局，可播放、跳转并下载为 M4A / MP4（带标题、节目、播出日期与封面标签）
+  - 直播电台：沿用 MV 页的布局，从直播窗口末尾附近播放，显示当前歌曲（分片 emsg 中的 ID3）与节目表
+- ✨ 电台需要 Apple Music 账号的 media-user-token（wrapper-lite 暂不支持电台）：第一次打开电台页时提示填写（可粘贴整段 Cookie），检验后只保存在浏览器中；被拒绝时再次提示，设置中心可以修改或清除
+- ✨ 服务端（二进制与 serverless）新增电台接口：`/station/next-tracks/<id>`、`/station/assets`、`/station/catalog/...`、`/station/recent`、`/station/storefront` 带上 media-user-token 请求 amp-api（不缓存），`/station/license` 按 MusicKit 的格式把 Widevine / PlayReady license 请求直接发给 Apple 的 license 服务器
+
+### 变更
+- MV 引擎的下载拆出通用的 `downloadStreams`（MV 与广播单集共用；只有一条流时保留原来的轨道）
+
+## v0.4.9 (2026-10-18)
+
+### 修复
+- 🐛 保存至文件夹时名字以 `~` 开头或结尾会报错（如专辑「A COMPLETE ~ALL SINGLES~」：`Failed to execute 'getDirectoryHandle'`）：文件名清理按 Chrome 的规则补齐，首尾的 `~` 换成全角 `～`，并去掉首尾的点与空白（含全角空格）、C1 控制字符、格式字符（零宽空格、方向标记等）、非字符与落单的代理项；`.lnk` / `.local` / `.{…}` 扩展名与 `clock$`、`desktop.ini`、`thumbs.db`、`COM¹` 等保留名也会改名
+- 🐛 名字过长时保存失败：单个名字限制在 240 字节（UTF-8，macOS / Linux 上限 255 字节，长日文标题此前会超出）；所选文件夹下的相对路径限制在 150 个字符、专辑 / 歌单文件夹限制在 90 个字符，避免超过 Windows 260 字符的路径上限（已计入 Chrome 写入时的 `.crswap` 临时后缀），超出时每次截短最长的一段
+- 🐛 设置页的文件名预览按截断后的实际结果显示
+
+## v0.4.8 (2026-10-18)
+
+### 修复
+- 🐛 下载的歌曲在 VLC 中播放到约 13 秒会跳到 15 秒：Apple Music 的前约 15 秒（prefetch key）与之后（正式 key）各有一个 sample description，解密后两者完全相同，但 chunk 在 15 秒处切换描述索引，VLC 会重建解码器并丢掉已缓冲的约 2 秒音频。defrag 现在合并内容相同的 `stsd` 条目，整首歌只用一个描述索引（AAC、ALAC 与 Atmos 均适用）
+
+## v0.4.7 (2026-10-15)
+
+### 修复
+- 🐛 `type="replacement"` 的歌词本地化（如繁体原文配简体 zh-Hans-CN）不再当作翻译显示，而是替换主歌词；逐字歌词保留 replacement 自带的逐字时间，下载的逐字 LRC 也不再退化成逐行
+- 🐛 没有时间轴的歌词（`timing="None"`）打开歌词界面时停在开头，而不是滚到最后
+
+## v0.4.6 (2026-10-13)
+
+### 修复
+- 🐛 二进制的 404 也带上 `no-store`（与 serverless 部署一致）：经 CDN（如 Cloudflare 代理）访问时，不存在的内容哈希地址返回的 404 不会被缓存，回滚版本后页面不会因缓存的 404 而无法加载
+
+## v0.4.5 (2026-10-13)
+
+### 修复
+- 🐛 serverless 部署中不存在的内容哈希地址（旧页面请求已不存在的版本）返回的 404 也带着 `immutable`，回滚到该版本后浏览器仍会用缓存的 404：现在这类请求交给函数，返回 `no-store` 的 404
+- 🐛 Vercel 部署不再公开 `/_headers`：`build-static` 只在 `--cloudflare`（`wrangler.toml` 的构建命令）时生成它
+
+## v0.4.4 (2026-10-13)
+
+### 变更
+- ⚡ 前端资源改用带内容哈希的地址（`/assets/h/app.<hash>.mjs`）并以 `immutable` 长期缓存，页面、模块、Worker 与 wasm 不再每次加载都向服务器确认（304）
+  - 文本资源里对其他资源的引用（`/assets/...` 与 `./x.mjs` 相对路径）在服务端与 `build-static` 中换成哈希地址，哈希按换完后的内容计算，依赖更新时引用它的资源地址也随之改变
+  - 页面外壳仍为 `no-cache`，升级后立即指向新地址；原地址继续以 `no-cache` + ETag 提供；serverless 部署由 `vercel.json` 与 `dist/_headers`（Cloudflare）设置缓存头
+- ⚡ 批量下载与播放时复用 Worker：歌曲解碎片、OPFS 写入、MV 下载与 FLAC 转码的 Worker 用完后保留复用（空闲 30 秒终止），不再每首歌都重新请求并编译 `media.wasm` 等
+
+### 修复
+- 🐛 批量下载时 wrapper-lite `/m3u8` 临时出错（如 HTTP 500）会把歌曲降级成 AAC-LC 256：现在只有 `/m3u8` 给出 `.m4p` 时才改用 `/webplayback`，请求失败则报错并自动重试
+
+## v0.4.3 (2026-10-12)
+
+### 新功能
+- ✨ 没有 master m3u8 的歌曲（wrapper-lite `/m3u8` 只给出 `.m4p`，例如 `1569279827`）可以播放和下载了：与参考实现 apple-music-downloader 相同，改用 `/webplayback` 的 AAC-LC 256（Widevine）
+  - 歌曲页列出唯一的「AAC · 256 kbps」变体并标注「仅 AAC-LC」；批量下载不论音质设置都下载它（首选其他音质时标记为已降级）
+  - Widevine license 请求在媒体 Worker 中生成（`am-media` 新增 `widevine`，移植自参考实现的 CDM 与内置设备，与 MV 的 PlayReady 共用 `media_challenge` / `media_license`），Widevine 失败时再试 PlayReady
+  - 分片在原有 Worker 池中按 CENC 原地解密（长度不变），播放、跳转、下载、标签都沿用歌曲的流程
+
+### 变更
+- `/mv/license`（以及 serverless 的同名接口）也接受不带 `drm-type` 的 Widevine 请求
+- `media_challenge` 多了第一个参数选择 DRM（0 PlayReady、1 Widevine）
+- wasm 体积：`media.wasm` 465 → 306 KB、`hook.wasm` 242 → 213 KB、`flac.wasm` 45 → 33 KB
+  - `hook.wasm` 与 `media.wasm` 改用新的 `wasm` profile（按体积优化，解密热点 temari 与 AES 保持 opt-level 3）：FairPlay / CENC 解密速度不变，`media.wasm` 的 MV 解密约慢 8%
+  - `hook.wasm` 内嵌的固定解密模板改为二进制（`fixed_template.bin`，由 `fixed_template.json` 生成，测试保证一致），不再嵌入 56 KB 的 base64 JSON
+  - `flac.wasm` 也经过 wasm-opt；`scripts/build-wasm.sh` 可用 `WASM_OPT` 指定 wasm-opt，找不到时给出警告
+
+## v0.4.2 (2026-10-12)
+
+### 新功能
+- ✨ 专辑、歌单中的 MV 可以一起下载：下载对话框中列出 MV（默认勾选，可一键「不含 MV」），「更多」菜单里的单个 MV 也可下载，进度同样显示在下载中心
+  - 同参考实现 apple-music-downloader：按设置中心新增的「MV」分组选视频（最高分辨率，默认 2160p）与音轨（全景声 → AC-3 → AAC / AC-3 → AAC / 只用 AAC），文件名沿用专辑 / 歌单曲目的模板，扩展名 `.mp4`
+  - 标签同参考实现的 `writeMVMP4Tags`：标题、艺人、专辑（取自所在专辑或歌单）、碟号 / 曲目号、发行日期、ISRC、UPC、版权、厂牌、分级、`PERFORMER`、`RELEASETIME`，封面为 MV 缩略图；媒体类型写为音乐视频（`stik` 6）
+- ✨ MV 页自己的下载也写入同样的标签与缩略图
+
+### 变更
+- MV 下载不再按时间交错：先下载视频轨、再下载音频轨，defrag 与参考实现的 `mv.Mux` 相同，每个 trun 一个 chunk、各轨道依次写入（`defrag::Options::mv` 只换 ftyp）
+- MV 下载同时预取 4 个分段（解密与写入仍按顺序），不再逐段等待
+- 打包为 ZIP 的 MV 在 defrag 写出时计算 CRC-32，不必再读一遍文件
+
+## v0.4.1 (2026-10-12)
+
+### 变更
+- 专辑、歌单、艺人与资料库歌单页的头部只保留随机播放、播放与「更多」三个按钮：下载、喜爱、添加到资料库、编辑歌单、艺人简介等收进「更多」菜单
+- 「更多」菜单改用官网 amp-contextual-menu 的样式：毛玻璃底、文字在左图标在右；手机上 270px 宽、居中贴底并加遮罩
+
+### 修复
+- 🐛 手机上专辑页、歌单页的随机播放按钮与下载按钮重叠
+
+## v0.4.0 (2026-10-12)
+
+### 新功能
+- ✨ 设置中心（`/settings`，侧边栏与手机菜单「排行榜」下方）：通用设置与下载设置（音质、性能、保存方式、文件名模板、标签、封面、歌词），保存在浏览器中
+- ✨ 专辑与歌单批量下载：专辑页、歌单页的下载按钮可选择音质与曲目；各处「更多」菜单中的歌曲、专辑与歌单也可下载
+  - 写入完整的 iTunes 标签、封面与歌词（LRC，可逐字、附带翻译 / 发音），可另存 `cover.jpg` 与 `.lrc` / `.ttml`
+  - 保存为 ZIP（含 ZIP64）、写入本地文件夹（File System Access API，可跳过已存在的文件）或逐个文件；歌单可附带 `.m3u8`
+- ✨ 下载中心：与播放条一样常驻底部，显示总进度与速度，展开后可查看每首歌的进度，取消、重试、再次保存与移除
+
+### 变更
+- 歌曲页的「下载解密文件」改由下载管理器进行，同样写入标签、封面与歌词，进度也显示在下载中心
+- `media.wasm` 的 defrag 可以在生成 `moov` 时写入 ilst 标签（`media_defrag` 增加 tags 参数），并在写出时计算 CRC-32
+
+## v0.3.2 (2026-10-10)
+
+### 新功能
+- ✨ 可以部署到 serverless 平台（Vercel 或 Cloudflare Workers），不需要运行二进制，README 里有一键部署按钮
+  - 静态资源由平台托管，后端只有一个函数（`serverless/core.mjs`）：amp-api 目录代理与 MV master 获取；amp-api 响应由平台缓存
+  - 默认由浏览器直连你自己的 wrapper-lite（本地模式）；设置环境变量 `AM_HOOK_WRAPPER_URL`（可另设 `AM_HOOK_WRAPPER_AUTH`）后由函数转发，此时没有限速与限并发，请用平台的访问控制限制访问
+  - `node scripts/build-static.mjs` 按 `src/assets.rs` 的资源表生成 `dist/`，构建只需要 Node
+
+### 变更
+- 新增 `/assets/host.js`，告诉页面服务端能否转发 wrapper-lite；不能时「wrapper-lite」设置里只有「本地」。二进制的行为不变
+
+## v0.3.1 (2026-10-09)
+
+### 变更
+- 代码质量整理，无功能变化：`cargo clippy --workspace --all-targets -- -D warnings` 零警告，并加入 CI
+  - 内嵌前端资源改由 `src/assets.rs` 的一张表统一注册路由；未知的 `/assets/views|lyrics|mv/*` 现在返回纯文本 404，MV 的 JS / CSS 响应带 `charset=utf-8`
+  - `src/m3u8.rs` 改名为 `src/links.rs`（实际只做链接与页面路径判定），`links.rs` 与请求日志共用同一份路径正则片段
+  - temari 的 FFI 导出函数标为 `unsafe extern "C"` 并补充 `# Safety` 文档（C ABI 不变）
+
+### 修复
+- 🐛 temari 解析 JSON 时，`\u` 转义后紧跟多字节字符会 panic（FFI 中表现为返回 NULL），现在按无效转义忽略
+
+## v0.3.0 (2026-10-09)
+
+### 新功能
+- ✨ 网页可以改用自己本地的 wrapper-lite：导航底部的「wrapper-lite」设置切换为「本地」后，wrapper-lite 请求由浏览器直接发出
+  - 可设置地址、每秒请求数上限、同时请求数上限与 `Authorization`，保存在浏览器中
+  - 地址可以带用户信息（如 `https://<token>@host`），与 `--wrapper-url` 相同，转为 `Authorization: Basic …` 发送
+  - wrapper-lite 需允许跨源请求，或在浏览器中安装解除跨域限制的插件
+  - MV 的 master 播放列表仍由服务端以 `User-Agent: AM` 获取（新接口 `/parse/mv-master`），避免拿不到 4K
+
+### 变更
+- 歌曲 master m3u8 改由浏览器获取并解析，`/parse/song/<adamId>` 只返回 master 地址（`{"code":0,"data":{"masterUrl":…}}`），不再返回 `variants`
+
+## v0.2.7 (2026-10-09)
+
+### 移除
+- 🗑️ 移除 `--hook` 服务端解密代理，解密只在浏览器中进行
+  - 同时移除 `--hook`、`--cache-ttl`、`--lru-cache-mb`、`--prefetch`、`--template-timeout` 参数，启动脚本中仍带有这些参数时需要删除
+  - 歌曲页不再提供外部播放器、复制地址与通过服务器下载；内置播放器不再使用原生 HLS / 直连播放
+
+## v0.2.6 (2026-10-07)
+
+### 修复
+- 🐛 手机上轻点歌词界面后，上下歌词行的模糊效果不再恢复
+- 🐛 经典歌词背景的渐变出现明显色带
+
+## v0.2.5 (2026-10-07)
+
+### 新功能
+- ✨ 歌词选项菜单可以切换歌词界面的背景：AMLL 流动背景（默认），或引入 AMLL 前的经典背景（仿 Apple Music 网页版，由多份旋转的封面经扭曲、模糊生成）
+  - 选择保存在浏览器中；浏览器不支持 WebGL 时自动使用经典背景
+  - 手机竖屏上经典背景的流动速度略为加快，与桌面观感接近
+
+## v0.2.4 (2026-10-07)
+
+### 新功能
+- ✨ 手机上的歌词界面在播放时自动隐藏底部的播放控件与歌词翻译按钮，歌词随之铺满到屏幕底部
+  - 3 秒没有触摸或手指上滑时隐藏，下滑、轻点屏幕或暂停时显示
+  - 控件隐藏时轻点歌词行只显示控件，再点一下才跳转到该行
+
+### 修复
+- 🐛 手机上歌词的左边缘与顶部封面没有对齐
+
+## v0.2.3 (2026-10-06)
+
+### 修复
+- 🐛 ALAC 转 FLAC 播放 24bit/96kHz 等高码率歌曲时，进度条在 22 秒左右卡住，需拖动进度才能继续
+  - 按实测码率缩小缓冲窗口，并在追加前主动移除已播放部分，避免浏览器因配额删掉尚未播放的音频
+  - 播放位置没有缓冲而停住时自动从当前位置重新缓冲
+
+## v0.2.2 (2026-10-06)
+
+### 新功能
+- ✨ 歌词界面的「歌词翻译」按钮扩展为歌词选项菜单
+  - 调整歌词字号（70%–150%）与字重（细体到特粗）
+  - 歌词来源可在 Apple Music 与 [AMLL 歌词库](https://amll.dev/reference/http-api/overview)之间切换：按 Apple Music 歌曲 ID 查询，未收录时仍用 Apple Music 歌词；只有选择它时才会请求
+  - 下载当前显示的 TTML 歌词
+  - 字号、字重与歌词来源保存在浏览器中
+- ✨ 支持 AMLL 歌词库的 TTML 写法（行内翻译与音译、和声翻译），并显示歌词制作者
+
+### 修复
+- 🐛 「喜爱的歌曲」页面点击歌曲时播放的不是所点的那一首
+
+## v0.2.1 (2026-10-06)
+
+### 修复
+- 🐛 版本号按数字比较，修复 v0.10.0 及以后版本会被误判为旧版本的问题
+- 🐛 更新检查改为后台进行并设置超时，GitHub 不可达时不再拖慢服务启动
+- 🐛 GitHub API 被限流等非 2xx 响应时给出明确的 HTTP 错误
+- 🐛 不支持的平台使用 `--auto-update` 时报错，不再导致程序崩溃
+- 🐛 Linux/macOS 上替换可执行文件改为原子操作，任一步失败时当前文件保持不变
+- 🐛 Windows 手动更新提示使用实际的 exe 文件名
+
+### 其他
+- CI 运行整个 workspace 的测试；需要真实 CDN / wrapper-lite 的端到端测试默认忽略
+- GitHub Actions 升级到新版本（Node.js 24）
+
+## v0.2.0 (2026-10-05)
+
+### 新功能
+- ✨ 添加了自动更新功能
+  - 使用 `--check-update` 在启动时检查是否有新版本
+  - 使用 `--auto-update` 自动下载并安装最新版本
+- 🚀 添加了 GitHub Actions 自动编译工作流
+  - 推送 tag 自动编译多平台二进制文件
+  - 支持 Windows (x86_64)、Linux (x86_64)、macOS (x86_64 和 aarch64)
+
+### 使用方法
+
+#### 检查更新
+```sh
+am-hook --check-update --listen 0.0.0.0:8888 --wrapper-url http://127.0.0.1:12340
+```
+
+#### 自动更新
+```sh
+am-hook --auto-update --listen 0.0.0.0:8888 --wrapper-url http://127.0.0.1:12340
+```
+
+### 发布新版本
+
+1. 更新 `Cargo.toml` 中的版本号
+2. 创建并推送 tag：
+```sh
+git tag v0.2.0
+git push origin v0.2.0
+```
+3. GitHub Actions 会自动编译并创建 Release
+
+### 注意事项
+
+- Windows 系统由于无法替换正在运行的可执行文件，自动更新会下载新版本到 `am-hook-new.exe`，需要手动重启完成更新
+- Linux 和 macOS 系统会自动替换可执行文件，并将旧版本备份为 `am-hook-backup`
